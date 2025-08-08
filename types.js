@@ -30,10 +30,13 @@ window.MBTI_IMAGES = {
     front: "https://ezcard-revtel2-com-prod.s3.ap-northeast-1.amazonaws.com/2025-07/2025-07-10_598001_MBTI-INFP-Rabbit-1752139590.png", 
     back: "https://ezcard-revtel2-com-prod.s3.ap-northeast-1.amazonaws.com/2025-08/2025-08-08_768337_MBTI-INFP-Rabbit-BK3-1754621098.png" 
   },
-  "INTP": { front: "https://ezcard-revtel2-com-prod.s3.ap-northeast-1.amazonaws.com/2025-07/2025-07-10_123738_MBTI-INTP-Owl-1752139619.png", back: "" },
+  "INTP": { 
+    front: "https://ezcard-revtel2-com-prod.s3.ap-northeast-1.amazonaws.com/2025-07/2025-07-10_123738_MBTI-INTP-Owl-1752139619.png", 
+    back: "https://ezcard-revtel2-com-prod.s3.ap-northeast-1.amazonaws.com/2025-08/2025-08-08_409801_MBTI-INTP-Owl-BK3-1754633492.png" 
+  },
   "ESTP": { 
     front: "https://ezcard-revtel2-com-prod.s3.ap-northeast-1.amazonaws.com/2025-07/2025-07-10_120502_MBTI-ESTP-Zebra-1752139660.png", 
-    back: "https://ezcard-revtel2-com-prod.s3.ap-northeast-1.amazonaws.com/2025-08/2025-08-08_939555_MBTI-ESTP-Zebra-BK2-1754615500.png" 
+    back: "https://ezcard-revtel2-com-prod.s3.ap-northeast-1.amazonaws.com/2025-08/2025-08-08_267746_MBTI-ESTP-Zebra-BK3-1754632944.png" 
   },
   "ESFP": { 
     front: "https://ezcard-revtel2-com-prod.s3.ap-northeast-1.amazonaws.com/2025-07/2025-07-10_699025_MBTI-ESFP-Cow-1752139690.png", 
@@ -61,5 +64,10 @@ window.MBTI_IMAGES = {
   },
   "ENTJ": { 
     front: "https://ezcard-revtel2-com-prod.s3.ap-northeast-1.amazonaws.com/2025-07/2025-07-10_125541_MBTI-ENTJ-Lion-1752140526.png", 
-    back: "https://ezcard-revtel2-com-prod.s3.ap-northeast-1.amazonaws.com/2025-08/2025-08-08_198667_MBTI-ENTJ-Lion-BK3-1754624816.png" }
+    back: "https://ezcard-revtel2-com-prod.s3.ap-northeast-1.amazonaws.com/2025-08/2025-08-08_198667_MBTI-ENTJ-Lion-BK3-1754624816.png" 
+  },
+  "OOOO": {
+    front: "https://ezcard-revtel2-com-prod.s3.ap-northeast-1.amazonaws.com/2025-08/2025-08-08_394818_MBTI-OOOO-BK3-1754633987.png",
+    back: ""
+  }
 };
