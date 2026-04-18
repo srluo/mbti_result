@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  />
+  <title>指紋掃描</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --card: rgba(255, 255, 255, 0.08);
+      --line: rgba(255, 255, 255, 0.18);
+      --text: #f4f7fb;
+      --muted: #aeb8c9;
+      --accent: #7cc7ff;
+      --ok: #63d297;
+      --warn: #ffb14a;
+      --bad: #ff6b6b;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+        "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+      background:
+        radial-gradient(circle at top, #1a2342 0%, #0b1020 45%, #050811 100%);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    .wrap {
+      width: 100%;
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 20px 16px 40px;
+    }
+
+    .title {
+      text-align: center;
+      margin: 8px 0 6px;
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.7;
+      margin: 0 0 18px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      overflow: hidden;
+      backdrop-filter: blur(14px);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.28);
+    }
+
+    .camera-box {
+      position: relative;
+      aspect-ratio: 9 / 16;
+      width: 100%;
+      background: #000;
+      overflow: hidden;
+    }
+
+    video,
+    canvas.preview {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      background: #000;
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    .mask {
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(to bottom, rgba(0,0,0,0.45), rgba(0,0,0,0.18) 22%, rgba(0,0,0,0.18) 78%, rgba(0,0,0,0.45)),
+        radial-gradient(circle at center, transparent 0 18%, rgba(0,0,0,0.22) 18% 100%);
+    }
+
+    .scan-frame {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: min(62vw, 290px);
+      height: min(62vw, 290px);
+      transform: translate(-50%, -50%);
+      border: 2px solid rgba(124, 199, 255, 0.9);
+      border-radius: 22px;
+      box-shadow:
+        0 0 0 9999px rgba(0,0,0,0.20),
+        0 0 28px rgba(124, 199, 255, 0.25),
+        inset 0 0 18px rgba(124, 199, 255, 0.15);
+    }
+
+    .corner {
+      position: absolute;
+      width: 28px;
+      height: 28px;
+      border-color: #a9ddff;
+      border-style: solid;
+      filter: drop-shadow(0 0 6px rgba(124,199,255,0.55));
+    }
+
+    .tl { top: -2px; left: -2px; border-width: 4px 0 0 4px; border-radius: 18px 0 0 0; }
+    .tr { top: -2px; right: -2px; border-width: 4px 4px 0 0; border-radius: 0 18px 0 0; }
+    .bl { bottom: -2px; left: -2px; border-width: 0 0 4px 4px; border-radius: 0 0 0 18px; }
+    .br { bottom: -2px; right: -2px; border-width: 0 4px 4px 0; border-radius: 0 0 18px 0; }
+
+    .scan-line {
+      position: absolute;
+      left: 8%;
+      width: 84%;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, #8fd8ff, transparent);
+      box-shadow: 0 0 12px rgba(124,199,255,0.9);
+      animation: scan 2.4s linear infinite;
+    }
+
+    @keyframes scan {
+      0%   { top: 12%; opacity: 0.2; }
+      15%  { opacity: 1; }
+      50%  { top: 50%; opacity: 0.95; }
+      85%  { opacity: 1; }
+      100% { top: 88%; opacity: 0.2; }
+    }
+
+    .guide {
+      position: absolute;
+      left: 50%;
+      bottom: 26px;
+      transform: translateX(-50%);
+      width: calc(100% - 28px);
+      text-align: center;
+      font-size: 14px;
+      color: #eef6ff;
+      line-height: 1.6;
+      text-shadow: 0 2px 12px rgba(0,0,0,0.5);
+    }
+
+    .top-label {
+      position: absolute;
+      top: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(9, 17, 31, 0.62);
+      border: 1px solid rgba(255,255,255,0.14);
+      padding: 8px 14px;
+      border-radius: 999px;
+      font-size: 13px;
+      color: #e7f4ff;
+      backdrop-filter: blur(10px);
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      padding: 14px;
+    }
+
+    button {
+      appearance: none;
+      border: 0;
+      border-radius: 14px;
+      min-height: 48px;
+      padding: 12px 14px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform .12s ease, opacity .12s ease;
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #6bc7ff, #91ddff);
+      color: #082033;
+    }
+
+    .btn-secondary {
+      background: rgba(255,255,255,0.10);
+      color: var(--text);
+      border: 1px solid rgba(255,255,255,0.14);
+    }
+
+    .btn-danger {
+      background: rgba(255, 107, 107, 0.15);
+      color: #ffdada;
+      border: 1px solid rgba(255,107,107,0.22);
+    }
+
+    button:disabled {
+      opacity: 0.42;
+      cursor: not-allowed;
+    }
+
+    .panel {
+      margin-top: 14px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 16px;
+    }
+
+    .panel h3 {
+      margin: 0 0 12px;
+      font-size: 17px;
+    }
+
+    .status {
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.7;
+      white-space: pre-line;
+    }
+
+    .score-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .score-item {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 14px;
+      padding: 10px 12px;
+    }
+
+    .score-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+
+    .bar {
+      width: 100%;
+      height: 8px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.08);
+      overflow: hidden;
+    }
+
+    .bar > span {
+      display: block;
+      height: 100%;
+      width: 0%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #67c6ff, #88e0b3);
+      transition: width .28s ease;
+    }
+
+    .badge {
+      display: inline-block;
+      min-width: 86px;
+      text-align: center;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .badge.ok { background: rgba(99,210,151,0.16); color: #9af0bf; }
+    .badge.warn { background: rgba(255,177,74,0.16); color: #ffd18e; }
+    .badge.bad { background: rgba(255,107,107,0.16); color: #ffb5b5; }
+
+    .preview-wrap {
+      margin-top: 12px;
+      display: none;
+    }
+
+    .preview-wrap.show {
+      display: block;
+    }
+
+    .hint-list {
+      margin: 10px 0 0;
+      padding-left: 18px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.8;
+    }
+
+    .footer-note {
+      text-align: center;
+      color: #7f8ca3;
+      font-size: 12px;
+      margin-top: 18px;
+      line-height: 1.7;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    @media (max-width: 540px) {
+      .title { font-size: 24px; }
+      .actions { grid-template-columns: 1fr; }
+      .scan-frame {
+        width: min(72vw, 280px);
+        height: min(72vw, 280px);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1 class="title">指紋掃描</h1>
+    <p class="subtitle">
+      請將手指指腹貼近鏡頭，保持穩定 2 秒。<br />
+      建議使用明亮且均勻的光線，避免陰影與反光。
+    </p>
+
+    <div class="card">
+      <div class="camera-box">
+        <video id="video" playsinline autoplay muted></video>
+        <canvas id="previewCanvas" class="preview hidden"></canvas>
+
+        <div class="overlay" id="overlay">
+          <div class="mask"></div>
+          <div class="top-label" id="topLabel">相機預備中...</div>
+
+          <div class="scan-frame" id="scanFrame">
+            <div class="corner tl"></div>
+            <div class="corner tr"></div>
+            <div class="corner bl"></div>
+            <div class="corner br"></div>
+            <div class="scan-line"></div>
+          </div>
+
+          <div class="guide" id="guideText">
+            將手指紋路置於中央框內<br />
+            靠近鏡頭，避免晃動
+          </div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn-secondary" id="startBtn">開啟相機</button>
+        <button class="btn-primary" id="captureBtn" disabled>拍照</button>
+        <button class="btn-danger" id="retakeBtn" disabled>重拍</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>拍攝狀態</h3>
+      <div class="status" id="statusText">尚未啟動相機。</div>
+    </div>
+
+    <div class="panel">
+      <h3>品質評估</h3>
+      <div id="qualityBadge" class="badge warn">尚未拍攝</div>
+
+      <div class="score-grid">
+        <div class="score-item">
+          <div class="score-top">
+            <span>亮度</span>
+            <span id="brightnessValue">-</span>
+          </div>
+          <div class="bar"><span id="brightnessBar"></span></div>
+        </div>
+
+        <div class="score-item">
+          <div class="score-top">
+            <span>對比</span>
+            <span id="contrastValue">-</span>
+          </div>
+          <div class="bar"><span id="contrastBar"></span></div>
+        </div>
+
+        <div class="score-item">
+          <div class="score-top">
+            <span>清晰度</span>
+            <span id="sharpnessValue">-</span>
+          </div>
+          <div class="bar"><span id="sharpnessBar"></span></div>
+        </div>
+      </div>
+
+      <ul class="hint-list" id="tipsList">
+        <li>建議手指與鏡頭距離約 3–5 公分。</li>
+        <li>請避免太暗、過亮或逆光。</li>
+        <li>若紋路不清楚，可改變角度或補充光源。</li>
+      </ul>
+
+      <div class="preview-wrap" id="previewWrap">
+        <h3 style="margin-top:16px;">拍攝預覽</h3>
+        <canvas id="cropCanvas" style="width:100%;border-radius:16px;border:1px solid rgba(255,255,255,0.12);background:#000;"></canvas>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>輸出資料</h3>
+      <div class="status" id="exportStatus">
+        拍照後可取得 base64，供後端 AI 分析使用。
+      </div>
+    </div>
+
+    <div class="footer-note">
+      本頁僅示範前端拍攝與初步品質判斷。<br />
+      真正的指紋特徵抽取與人格模型，建議交由後端 API 處理。
+    </div>
+  </div>
+
+  <script>
+    const video = document.getElementById("video");
+    const previewCanvas = document.getElementById("previewCanvas");
+    const previewCtx = previewCanvas.getContext("2d", { willReadFrequently: true });
+
+    const cropCanvas = document.getElementById("cropCanvas");
+    const cropCtx = cropCanvas.getContext("2d", { willReadFrequently: true });
+
+    const overlay = document.getElementById("overlay");
+    const topLabel = document.getElementById("topLabel");
+    const guideText = document.getElementById("guideText");
+
+    const startBtn = document.getElementById("startBtn");
+    const captureBtn = document.getElementById("captureBtn");
+    const retakeBtn = document.getElementById("retakeBtn");
+
+    const statusText = document.getElementById("statusText");
+    const exportStatus = document.getElementById("exportStatus");
+    const previewWrap = document.getElementById("previewWrap");
+
+    const qualityBadge = document.getElementById("qualityBadge");
+    const brightnessValue = document.getElementById("brightnessValue");
+    const contrastValue = document.getElementById("contrastValue");
+    const sharpnessValue = document.getElementById("sharpnessValue");
+
+    const brightnessBar = document.getElementById("brightnessBar");
+    const contrastBar = document.getElementById("contrastBar");
+    const sharpnessBar = document.getElementById("sharpnessBar");
+
+    let stream = null;
+    let capturedBase64 = "";
+    let cameraStarted = false;
+
+    async function startCamera() {
+      try {
+        statusText.textContent = "正在請求相機權限...";
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: "environment" },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 }
+          },
+          audio: false
+        });
+
+        video.srcObject = stream;
+
+        await new Promise((resolve) => {
+          video.onloadedmetadata = () => resolve();
+        });
+
+        await video.play();
+
+        cameraStarted = true;
+        captureBtn.disabled = false;
+        retakeBtn.disabled = true;
+
+        video.classList.remove("hidden");
+        previewCanvas.classList.add("hidden");
+        overlay.classList.remove("hidden");
+
+        topLabel.textContent = "請將指紋置於中央";
+        guideText.innerHTML = "將手指紋路置於中央框內<br />靠近鏡頭，避免晃動";
+        statusText.textContent = "相機已啟動。請將手指靠近鏡頭，確認紋路清楚後拍照。";
+      } catch (err) {
+        console.error(err);
+        statusText.textContent = "無法開啟相機。請確認已授權瀏覽器使用相機，並使用 HTTPS 或本機環境。";
+      }
+    }
+
+    function stopCamera() {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+        stream = null;
+      }
+    }
+
+    function capturePhoto() {
+      if (!cameraStarted || !video.videoWidth || !video.videoHeight) {
+        statusText.textContent = "相機尚未準備完成。";
+        return;
+      }
+
+      const vw = video.videoWidth;
+      const vh = video.videoHeight;
+
+      previewCanvas.width = vw;
+      previewCanvas.height = vh;
+      previewCtx.drawImage(video, 0, 0, vw, vh);
+
+      video.classList.add("hidden");
+      previewCanvas.classList.remove("hidden");
+
+      captureBtn.disabled = true;
+      retakeBtn.disabled = false;
+
+      topLabel.textContent = "已完成拍攝";
+      guideText.innerHTML = "請檢查影像品質<br />如不清楚可重新拍攝";
+
+      const cropRect = getCentralCrop(vw, vh);
+      const imageData = previewCtx.getImageData(cropRect.x, cropRect.y, cropRect.w, cropRect.h);
+
+      cropCanvas.width = cropRect.w;
+      cropCanvas.height = cropRect.h;
+      cropCtx.putImageData(imageData, 0, 0);
+
+      previewWrap.classList.add("show");
+
+      const result = evaluateImageQuality(imageData);
+      updateQualityUI(result);
+
+      capturedBase64 = cropCanvas.toDataURL("image/jpeg", 0.92);
+
+      exportStatus.textContent =
+        "已取得裁切後的 base64，可直接送往後端。\n\n" +
+        "範例：\n" +
+        "POST /api/fingerprint/analyze\n" +
+        JSON.stringify({
+          imageBase64: capturedBase64.slice(0, 80) + "...",
+          meta: {
+            brightness: result.brightness,
+            contrast: result.contrast,
+            sharpness: result.sharpness,
+            level: result.level
+          }
+        }, null, 2);
+
+      statusText.textContent =
+        "拍攝完成。\n" +
+        "若品質評估偏低，建議重新拍攝以提升後續 AI 分析效果。";
+    }
+
+    function retakePhoto() {
+      if (!cameraStarted) {
+        statusText.textContent = "請先開啟相機。";
+        return;
+      }
+
+      video.classList.remove("hidden");
+      previewCanvas.classList.add("hidden");
+      overlay.classList.remove("hidden");
+
+      captureBtn.disabled = false;
+      retakeBtn.disabled = true;
+      previewWrap.classList.remove("show");
+
+      topLabel.textContent = "請將指紋置於中央";
+      guideText.innerHTML = "將手指紋路置於中央框內<br />靠近鏡頭，避免晃動";
+
+      qualityBadge.className = "badge warn";
+      qualityBadge.textContent = "尚未拍攝";
+
+      brightnessValue.textContent = "-";
+      contrastValue.textContent = "-";
+      sharpnessValue.textContent = "-";
+
+      brightnessBar.style.width = "0%";
+      contrastBar.style.width = "0%";
+      sharpnessBar.style.width = "0%";
+
+      exportStatus.textContent = "拍照後可取得 base64，供後端 AI 分析使用。";
+      statusText.textContent = "已切回相機畫面，請重新拍攝。";
+    }
+
+    function getCentralCrop(width, height) {
+      const size = Math.floor(Math.min(width, height) * 0.52);
+      const x = Math.floor((width - size) / 2);
+      const y = Math.floor((height - size) / 2);
+      return { x, y, w: size, h: size };
+    }
+
+    function evaluateImageQuality(imageData) {
+      const data = imageData.data;
+      const gray = new Uint8ClampedArray(imageData.width * imageData.height);
+
+      let sum = 0;
+      for (let i = 0, j = 0; i < data.length; i += 4, j++) {
+        const g = Math.round(
+          data[i] * 0.299 +
+          data[i + 1] * 0.587 +
+          data[i + 2] * 0.114
+        );
+        gray[j] = g;
+        sum += g;
+      }
+
+      const n = gray.length;
+      const mean = sum / n;
+
+      let variance = 0;
+      for (let i = 0; i < n; i++) {
+        const d = gray[i] - mean;
+        variance += d * d;
+      }
+      variance /= n;
+      const stdDev = Math.sqrt(variance);
+
+      const sharpness = calcLaplacianVariance(gray, imageData.width, imageData.height);
+
+      const brightnessScore = scoreBrightness(mean);
+      const contrastScore = clamp(Math.round((stdDev / 64) * 100), 0, 100);
+      const sharpnessScore = clamp(Math.round((sharpness / 1800) * 100), 0, 100);
+
+      const total = Math.round(
+        brightnessScore * 0.25 +
+        contrastScore * 0.35 +
+        sharpnessScore * 0.40
+      );
+
+      let level = "bad";
+      let text = "建議重拍";
+      if (total >= 75) {
+        level = "ok";
+        text = "品質良好";
+      } else if (total >= 52) {
+        level = "warn";
+        text = "可用，但建議再拍更清楚";
+      }
+
+      return {
+        brightness: Math.round(mean),
+        contrast: Math.round(stdDev),
+        sharpness: Math.round(sharpness),
+        brightnessScore,
+        contrastScore,
+        sharpnessScore,
+        total,
+        level,
+        text
+      };
+    }
+
+    function calcLaplacianVariance(gray, width, height) {
+      const values = [];
+      for (let y = 1; y < height - 1; y++) {
+        for (let x = 1; x < width - 1; x++) {
+          const c = gray[y * width + x];
+          const up = gray[(y - 1) * width + x];
+          const down = gray[(y + 1) * width + x];
+          const left = gray[y * width + (x - 1)];
+          const right = gray[y * width + (x + 1)];
+
+          const lap = (4 * c) - up - down - left - right;
+          values.push(lap);
+        }
+      }
+
+      let mean = 0;
+      for (const v of values) mean += v;
+      mean /= values.length || 1;
+
+      let variance = 0;
+      for (const v of values) {
+        const d = v - mean;
+        variance += d * d;
+      }
+      variance /= values.length || 1;
+
+      return variance;
+    }
+
+    function scoreBrightness(mean) {
+      const target = 135;
+      const diff = Math.abs(mean - target);
+      return clamp(100 - Math.round((diff / 135) * 100), 0, 100);
+    }
+
+    function clamp(v, min, max) {
+      return Math.max(min, Math.min(max, v));
+    }
+
+    function updateQualityUI(result) {
+      qualityBadge.className = `badge ${result.level}`;
+      qualityBadge.textContent = `${result.text}（總分 ${result.total}）`;
+
+      brightnessValue.textContent = `${result.brightness} / 255`;
+      contrastValue.textContent = `${result.contrast}`;
+      sharpnessValue.textContent = `${result.sharpness}`;
+
+      brightnessBar.style.width = `${result.brightnessScore}%`;
+      contrastBar.style.width = `${result.contrastScore}%`;
+      sharpnessBar.style.width = `${result.sharpnessScore}%`;
+    }
+
+    startBtn.addEventListener("click", startCamera);
+    captureBtn.addEventListener("click", capturePhoto);
+    retakeBtn.addEventListener("click", retakePhoto);
+
+    window.addEventListener("beforeunload", stopCamera);
+  </script>
+</body>
+</html>
